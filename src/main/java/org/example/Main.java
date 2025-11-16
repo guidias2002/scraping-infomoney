@@ -39,9 +39,6 @@ public class Main {
                     urlsValidas.add(url);
                 }
             }
-
-            System.out.println("\nTotal coletado (válidas): " + urlsValidas.size());
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -70,9 +67,7 @@ public class Main {
                 continue;
             }
 
-            if (link.startsWith(URL_MERCADO)
-                    && !urls.contains(link)) {
-
+            if (link.startsWith(URL_MERCADO) && !urls.contains(link)) {
                 urls.add(link);
             }
         }
@@ -97,8 +92,6 @@ public class Main {
                 .execute();
 
         JSONArray array = new JSONArray(response.body());
-
-        System.out.println("API retornou " + array.length() + " itens");
 
         int ultimoId = postId;
 
@@ -131,38 +124,23 @@ public class Main {
                     .userAgent("Mozilla/5.0")
                     .get();
 
-            String titulo = doc.selectFirst("h1") != null ? doc.selectFirst("h1").text() : "";
+            String titulo = verificarTextoNulo(doc.selectFirst("h1"));
+            if (titulo.isEmpty()) return false;
 
-            if (titulo.isEmpty()) {
-                return false;
-            }
-
-            String subtitulo = doc.selectFirst("h2") != null ? doc.selectFirst("h2").text() : "";
-
-            if (subtitulo.isEmpty()) {
-                return false;
-            }
+            String subtitulo = verificarTextoNulo(doc.selectFirst("h2"));
+            if (subtitulo.isEmpty()) return false;
 
             Element autorElemento = doc.selectFirst("a[href*='/autor/']");
             String autor = autorElemento != null ? autorElemento.text().trim() : "N/A";
-
-            if (autor.isEmpty()) {
-                return false;
-            }
+            if (autor.isEmpty()) return false;
 
             Element dataElemento = doc.selectFirst("time");
             String data = dataElemento != null ? dataElemento.text() : "";
-
-            if (data.isEmpty()) {
-                return false;
-            }
+            if (data.isEmpty()) return false;
 
             Element conteudoElemento = doc.selectFirst("article, .article-content, .single-post-content");
             String conteudo = conteudoElemento != null ? conteudoElemento.text().replaceAll("\\s+", " ").trim() : "";
-
-            if (conteudo.isEmpty()) {
-                return false;
-            }
+            if (conteudo.isEmpty()) return false;
 
             System.out.println("\n------------------------");
             System.out.println("URL: " + url);
@@ -173,10 +151,15 @@ public class Main {
             System.out.println("Conteúdo: " + conteudo);
 
             return true;
-
         } catch (Exception e) {
-            System.out.println("[ERRO] ao processar: " + url);
+            System.out.println("Erro ao processar: " + url);
             return false;
         }
+    }
+
+    private static String verificarTextoNulo(Element el) {
+        if (el == null) return "";
+        String text = el.text();
+        return text != null ? text.trim() : "";
     }
 }
