@@ -7,9 +7,10 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class Main {
     static final String URL_API = "https://www.infomoney.com.br/wp-json/infomoney/v1/cards";
@@ -17,24 +18,19 @@ public class Main {
     static final int LIMITE_NOTICIAS = 20;
 
     public static void main(String[] args) {
-
         try {
             List<String> urls = new ArrayList<>();
             List<String> urlsValidas = new ArrayList<>();
 
-            // notícias carregadas no html
             urls.addAll(pegarNoticiasDaPagina());
 
-            // notícias carregadas via api
             int lastPostId = 0;
-
             while (urlsValidas.size() < LIMITE_NOTICIAS) {
                 while (urls.size() <= urlsValidas.size()) {
                     lastPostId = carregarMais(lastPostId, urls);
                 }
 
                 String url = urls.get(urlsValidas.size());
-
                 if (processarNoticia(url)) {
                     urlsValidas.add(url);
                 }
@@ -45,7 +41,6 @@ public class Main {
     }
 
     static List<String> pegarNoticiasDaPagina() throws Exception {
-
         Document doc = Jsoup.connect(URL_MERCADO)
                 .userAgent("Mozilla/5.0")
                 .get();
@@ -60,7 +55,6 @@ public class Main {
 
         // noticias cards
         for (Element elemento : doc.select("[data-ds-component=card-sm] a[href], [data-ds-component=card-md] a[href], [data-ds-component=card-lg] a[href]")) {
-
             String link = elemento.attr("href");
 
             if (link.equals(URL_MERCADO) || link.equals(URL_MERCADO + "/")) {
@@ -76,7 +70,6 @@ public class Main {
     }
 
     static int carregarMais(int postId, List<String> urls) throws Exception {
-
         if (urls.size() >= LIMITE_NOTICIAS) return postId;
 
         JSONObject payload = new JSONObject();
@@ -96,7 +89,6 @@ public class Main {
         int ultimoId = postId;
 
         for (int i = 0; i < array.length(); i++) {
-
             if (urls.size() >= LIMITE_NOTICIAS) break;
 
             JSONObject obj = array.getJSONObject(i);
@@ -127,19 +119,21 @@ public class Main {
             String titulo = verificarTextoNulo(doc.selectFirst("h1"));
             if (titulo.isEmpty()) return false;
 
-            String subtitulo = verificarTextoNulo(doc.selectFirst("h2"));
+            String subtitulo = verificarTextoNulo(doc.selectFirst("div.text-lg.md\\:text-xl.font-medium.tracking-tight.text-wl-neutral-600"));
             if (subtitulo.isEmpty()) return false;
 
-            Element autorElemento = doc.selectFirst("a[href*='/autor/']");
-            String autor = autorElemento != null ? autorElemento.text().trim() : "N/A";
+            String autor = verificarTextoNulo(doc.selectFirst("a[href*='/autor/']"));
             if (autor.isEmpty()) return false;
 
-            Element dataElemento = doc.selectFirst("time");
-            String data = dataElemento != null ? dataElemento.text() : "";
+            String data = verificarTextoNulo(doc.selectFirst("time"));
             if (data.isEmpty()) return false;
 
-            Element conteudoElemento = doc.selectFirst("article, .article-content, .single-post-content");
-            String conteudo = conteudoElemento != null ? conteudoElemento.text().replaceAll("\\s+", " ").trim() : "";
+            DateTimeFormatter entrada = DateTimeFormatter.ofPattern("dd/MM/yyyy HH'h'mm");
+            DateTimeFormatter saida = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            LocalDateTime dataFormatada = LocalDateTime.parse(data, entrada);
+            String dataFormatadaSaida = dataFormatada.format(saida);
+
+            String conteudo = verificarTextoNulo(doc.selectFirst("article, .article-content, .single-post-content"));
             if (conteudo.isEmpty()) return false;
 
             System.out.println("\n------------------------");
@@ -147,7 +141,7 @@ public class Main {
             System.out.println("Título: " + titulo);
             System.out.println("Subtítulo: " + subtitulo);
             System.out.println("Autor: " + autor);
-            System.out.println("Data: " + data);
+            System.out.println("Data: " + dataFormatadaSaida);
             System.out.println("Conteúdo: " + conteudo);
 
             return true;
@@ -157,9 +151,9 @@ public class Main {
         }
     }
 
-    private static String verificarTextoNulo(Element el) {
-        if (el == null) return "";
-        String text = el.text();
+    private static String verificarTextoNulo(Element elemento) {
+        if (elemento == null) return "";
+        String text = elemento.text();
         return text != null ? text.trim() : "";
     }
 }
